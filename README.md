@@ -1,0 +1,2 @@
+# StarStriker
+Pygame project
