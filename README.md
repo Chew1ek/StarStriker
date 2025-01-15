@@ -1,2 +1,2 @@
 # StarStriker
-Pygame project
+Проект для второго года Яндекс Лицея по Pygame
