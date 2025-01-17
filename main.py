@@ -33,13 +33,17 @@ class Menu:
                 pygame.draw.rect(surf, ('blue'), option_rect)
             surf.blit(option, option_rect)
 
+def ready():
+    global player_ready
+    player_ready += 1
 
+player_ready = 0
 width, height = 600, 900
 screen_rect = (0, 0, width, height)
 ARIAL_50 = pygame.font.SysFont('arial', 50)
 background = pygame.image.load('data/background.png')
 menu = Menu()
-menu.append_option('Старт', lambda: print('Hello'))
+menu.append_option('Старт', lambda: ready())
 menu.append_option('Выход', quit)
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
@@ -56,25 +60,27 @@ while True:
         if event.type == pygame.QUIT:
             exit()
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_w:
                 menu.switch(-1)
-            elif event.key == pygame.K_DOWN:
+            elif event.key == pygame.K_s:
                 menu.switch(1)
-            elif event.key == pygame.K_e:
+            elif event.key == pygame.K_RETURN:
                 menu.select()
 
 
+    if player_ready == 0:
+        screen.fill((0, 0, 0))
+        menu.draw(screen, 225, 200, 75)
+    else:
+        screen.blit(background, (0, 0))
+        key = pygame.key.get_pressed()
+        if key[pygame.K_d]:
+            player.rect.x += 5
+        if key[pygame.K_a]:
+            player.rect.x -= 5
+        if player.rect.left < 0:
+            player.rect.left = 0
+        if player.rect.right > width:
+            player.rect.right = width
 
-    key = pygame.key.get_pressed()
-    if key[pygame.K_d]:
-        player.rect.x += 5
-    if key[pygame.K_a]:
-        player.rect.x -= 5
-    if player.rect.left < 0:
-        player.rect.left = 0
-    if player.rect.right > width:
-        player.rect.right = width
-
-    screen.blit(background, (0, 0))
-    menu.draw(screen, 100, 100, 75)
     screen.blit(player.image, player.rect)
