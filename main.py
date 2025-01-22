@@ -41,7 +41,7 @@ class Player(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, speed=1, health=2):
+    def __init__(self, x, y, image, speed=1, health=10):
         pygame.sprite.Sprite.__init__(self)
 
         self.speed = speed
@@ -180,6 +180,10 @@ while True:
             player.strike()
             if key_pressed[pygame.K_ESCAPE]:
                 quit()
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player.strike()
 
         bullet_group.update()
         bullet_group.draw(screen)
