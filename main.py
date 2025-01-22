@@ -1,27 +1,70 @@
 import pygame
+import random
+
 pygame.init()
 
-class Object(pygame.sprite.Sprite):
-    def __init__(self, x, y, file):
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
         pygame.sprite.Sprite.__init__(self)
 
-        self.image = pygame.image.load(file).convert_alpha()
+        self.image = pygame.image.load(image)
         self.rect = self.image.get_rect(center = (x, y))
+
+    def move(self):
+        if key_pressed[pygame.K_d]:
+            self.rect.x += 5
+        if key_pressed[pygame.K_a]:
+            self.rect.x -= 5
+        if player.rect.left < 0:
+            self.rect.left = 0
+        if player.rect.right > width:
+            self.rect.right = width
+
+    def strike(self):
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    print(1)
+                    bullet = Bullet(player.rect.center, bullet_image)
+                    bullet_group.add(bullet)
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y, image, speed, health):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.speed = speed
+        self.health= health
+        self.image = pygame.image.load(image)
+        self.rect = self.image.get_rect(center = (x, y))
+
+    def move(self):
+        self.rect.y += self.speed
+        if self.rect.y > height:
+            self.kill()
+            self.create_new()
+
+    def create_new(self):
+        global enemy
+        enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png', 5, 3)
+
+    def damage(self):
+        if self.spritecollideany():
+            pass
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, pos, image):
+    def __init__(self, pos, image, speed=-10, bullet_type=0):
         super().__init__()
         self.image = image
         self.rect = self.image.get_rect()
-        self.rect.center = pos
-        self.speedx = 0
-        self.speedy = 0
+        self.rect.center = (pos)
+        self.speedy = speed
+        self.type = bullet_type
 
     def update(self):
-        self.rect.x += self.speedx
         self.rect.y += self.speedy
-        if self.rect.right < 0 or self.rect.left > width or self.rect.top > height or self.rect.bottom < 0:
+        if self.rect.top > height or self.rect.bottom < 0:
             self.kill()
 
 class Menu:
@@ -59,29 +102,30 @@ def ready():
 player_ready = 0
 width, height = 600, 900
 screen_rect = (0, 0, width, height)
+
 ARIAL_50 = pygame.font.SysFont('arial', 50)
 background = pygame.image.load('data/background.png')
 menu = Menu()
+
 menu.append_option('Старт', lambda: ready())
 menu.append_option('Выбор уровней', lambda: print('Выбор уровня'))
 menu.append_option('Выход', quit)
+
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
 bullet_image = pygame.image.load('data/bullet.png')
-player = Object(300, 800, 'data/player.png')
-enemy = pygame.image.load('data/enemy.png')
-enemy_y = -0
+player = Player(300, 800, 'data/player.png')
+enemy = Enemy(random.randint(0, 600), 0, 'data/enemy.png', 5, 3)
 
 bullet_group = pygame.sprite.Group()
-
+score = 0
 
 while True:
     FPS = 60
     pygame.display.set_caption('Star Striker')
     pygame.display.update()
     clock.tick(FPS)
-    enemy_rect = enemy.get_rect(topleft=(300, enemy_y))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit()
@@ -92,30 +136,20 @@ while True:
                 menu.switch(1)
             elif event.key == pygame.K_RETURN:
                 menu.select()
-            elif event.key == pygame.K_SPACE:
-                bullet = Bullet(player.rect.center, bullet_image)
-                bullet.speedy = -10
-                bullet_group.add(bullet)
-
 
 
     if player_ready == 0:
         screen.fill((0, 0, 0))
         menu.draw(screen, 225, 200, 75)
     else:
-        enemy_y += 2
+        enemy.move()
         screen.blit(background, (0, 0))
-        key = pygame.key.get_pressed()
-        if key[pygame.K_d]:
-            player.rect.x += 5
-        if key[pygame.K_a]:
-            player.rect.x -= 5
-        if player.rect.left < 0:
-            player.rect.left = 0
-        if player.rect.right > width:
-            player.rect.right = width
+        key_pressed = pygame.key.get_pressed()
+        if key_pressed:
+            player.move()
+            player.strike()
 
         bullet_group.update()
         bullet_group.draw(screen)
         screen.blit(player.image, player.rect)
-        screen.blit(enemy, (300 ,enemy_y))
+        screen.blit(enemy.image, enemy.rect)
