@@ -21,16 +21,20 @@ class Player(pygame.sprite.Sprite):
             self.rect.right = width
 
     def strike(self):
+        global bullet
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    print(1)
                     bullet = Bullet(player.rect.center, bullet_image)
                     bullet_group.add(bullet)
+        if pygame.sprite.spritecollideany(enemy, bullet_group):
+            print('попал')
+            bullet.killed()
+            enemy.damage()
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, speed, health):
+    def __init__(self, x, y, image, speed=2, health=2):
         pygame.sprite.Sprite.__init__(self)
 
         self.speed = speed
@@ -46,11 +50,16 @@ class Enemy(pygame.sprite.Sprite):
 
     def create_new(self):
         global enemy
-        enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png', 5, 3)
+        enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
 
     def damage(self):
-        if self.spritecollideany():
-            pass
+        global score
+        if self.health > 0:
+            self.health -= 1
+        else:
+            self.kill()
+            self.create_new()
+            score += 1
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -66,6 +75,9 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y += self.speedy
         if self.rect.top > height or self.rect.bottom < 0:
             self.kill()
+
+    def killed(self):
+        self.kill()
 
 class Menu:
     def __init__(self):
@@ -116,7 +128,7 @@ clock = pygame.time.Clock()
 
 bullet_image = pygame.image.load('data/bullet.png')
 player = Player(300, 800, 'data/player.png')
-enemy = Enemy(random.randint(0, 600), 0, 'data/enemy.png', 5, 3)
+enemy = Enemy(random.randint(0, 600), 0, 'data/enemy.png', 2, 1)
 
 bullet_group = pygame.sprite.Group()
 score = 0
