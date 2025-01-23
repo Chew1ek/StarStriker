@@ -28,20 +28,22 @@ class Player(pygame.sprite.Sprite):
                 if event.key == pygame.K_SPACE:
                     bullet = Bullet(player.rect.center, bullet_image)
                     bullet_group.add(bullet)
+                    sound_strike.play()
         if pygame.sprite.spritecollideany(enemy, bullet_group):
             bullet.killed()
             enemy.damage()
 
     def lose(self):
-        global player_ready
+        global player_ready, score
         if self.health <= 0:
             player_ready = 2
         else:
             self.health -= 1
+            score -= 50
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, speed=1, health=10):
+    def __init__(self, x, y, image, speed=1, health=5):
         pygame.sprite.Sprite.__init__(self)
 
         self.speed = speed
@@ -119,6 +121,22 @@ class Menu:
                     pygame.draw.rect(surf, ('red'), option_rect)
             surf.blit(option, option_rect)
 
+    def deletemenu(self):
+        self._option_surfaces = []
+        self._callbacks = []
+        self._current_option_index = 0
+
+    def menu_swap(self):
+        if event.key == pygame.K_w:
+            menu.switch(-1)
+        if event.key == pygame.K_s:
+            menu.switch(1)
+        if event.key == pygame.K_RETURN:
+            menu.select()
+        if event.key == pygame.K_ESCAPE:
+            quit()
+
+
 
 def ready():
     global player_ready
@@ -134,6 +152,11 @@ ARIAL_50 = pygame.font.SysFont('arial', 50)
 font = pygame.font.SysFont('arial', 35)
 background = pygame.image.load('data/background.png')
 menu = Menu()
+
+sound_strike = pygame.mixer.Sound('sounds/strike.wav')
+pygame.mixer.music.load('sounds/fon.wav')
+pygame.mixer.music.set_volume(0.1)
+pygame.mixer.music.play(-1)
 
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
@@ -154,24 +177,20 @@ while True:
     pygame.display.update()
     clock.tick(FPS)
     follow = font.render(f'Счёт: {score}', 1, ('black'))
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit()
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w:
-                menu.switch(-1)
-            if event.key == pygame.K_s:
-                menu.switch(1)
-            if event.key == pygame.K_RETURN:
-                menu.select()
-            if event.key == pygame.K_ESCAPE:
-                quit()
+            menu.menu_swap()
 
 
     if player_ready == 0:
         screen.fill((0, 0, 0))
         menu.draw(screen, 225, 200, 75)
+
     else:
+        menu.deletemenu()
         enemy.move()
         screen.blit(background, (0, 0))
         key_pressed = pygame.key.get_pressed()
@@ -184,9 +203,11 @@ while True:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.strike()
+                    sound_strike.play()
 
         bullet_group.update()
         bullet_group.draw(screen)
         screen.blit(enemy.image, enemy.rect)
         screen.blit(player.image, player.rect)
         screen.blit(follow, (0, 0))
+        screen.blit((font.render(f'Жизни: {player.health}', 1, ('black'))), (450, 850))
