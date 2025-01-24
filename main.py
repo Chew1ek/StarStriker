@@ -1,7 +1,33 @@
+import os
+import sys
+
 import pygame
 import random
 
 pygame.init()
+
+
+def ready():
+    global player_ready
+    player_ready = 1
+
+
+def load_image(name):
+    fullname = os.path.join('data', name)
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    image = pygame.image.load(fullname)
+    return image
+
+
+def create_particles(position):
+    particle_count = 5
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
+
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, image, health=3):
@@ -34,16 +60,28 @@ class Player(pygame.sprite.Sprite):
             enemy.damage()
 
     def lose(self):
-        global player_ready, score
-        if self.health <= 0:
-            player_ready = 2
-        else:
-            self.health -= 1
-            score -= 50
+        global score
+        score -= 50
+
+    def damage(self):
+        if pygame.sprite.spritecollideany(player, enemy_group):
+            enemy.killed()
+            if self.health < 1:
+                menu.game_over()
+            else:
+                self.health -= 1
+                Lives.check_lives(self.health)
+                self.create_new()
+
+    def create_new(self):
+        global player
+        player = Player(300, 800, 'data/player.png', self.health)
+        create_particles((self.rect.x, self.rect.y))
+
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, speed=1, health=5):
+    def __init__(self, x, y, image, speed=3, health=3):
         pygame.sprite.Sprite.__init__(self)
 
         self.speed = speed
@@ -61,6 +99,7 @@ class Enemy(pygame.sprite.Sprite):
     def create_new(self):
         global enemy
         enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
+        enemy_group.add(enemy)
 
     def damage(self):
         global score
@@ -70,6 +109,10 @@ class Enemy(pygame.sprite.Sprite):
             self.kill()
             self.create_new()
             score += 100
+
+    def killed(self):
+        self.kill()
+        self.create_new()
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -89,8 +132,30 @@ class Bullet(pygame.sprite.Sprite):
     def killed(self):
         self.kill()
 
+
+class Lives(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(image)
+        self.rect = self.image.get_rect(center = (x, y))
+
+    def check_lives(lives):
+        global heart
+        if lives == 3:
+            heart = Lives(550, 25, 'data/heart/heart_1.png')
+        if lives == 2:
+            heart = Lives(550, 25, 'data/heart/heart_2.png')
+        if lives == 1:
+            heart = Lives(550, 25, 'data/heart/heart_3.png')
+        if lives == 0:
+            heart = Lives(550, 25, 'data/heart/heart_4.png')
+
+
 class Menu:
     def __init__(self):
+        self.current_option_backup = 0
+        self.callbacks_backup = []
+        self.option_backup = []
         self._option_surfaces = []
         self._callbacks = []
         self._current_option_index = 0
@@ -122,6 +187,9 @@ class Menu:
             surf.blit(option, option_rect)
 
     def deletemenu(self):
+        self.option_backup = self._option_surfaces
+        self.callbacks_backup = self._callbacks
+        self.current_option_backup = self._current_option_index
         self._option_surfaces = []
         self._callbacks = []
         self._current_option_index = 0
@@ -132,24 +200,113 @@ class Menu:
         if event.key == pygame.K_s:
             menu.switch(1)
         if event.key == pygame.K_RETURN:
+            global player, enemy, score
+            score = 0
+            enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
+            player = Player(300, 800, 'data/player.png')
+            enemy_group.add(enemy)
             menu.select()
         if event.key == pygame.K_ESCAPE:
             quit()
 
+    def leaderboard(self):
+        menu.deletemenu()
+        menu.append_option(f'{player_name} - 1000', lambda: menu.name_input())
+        menu.append_option('Назад', lambda: menu.back())
+
+    def level_switcher(self):
+        menu.deletemenu()
+        menu.append_option('Уровень 1', lambda: print('Уровень 1'))
+        menu.append_option('Уровень 2', lambda: print('Уровень 2'))
+        menu.append_option('Назад', lambda: menu.back())
+
+    def back(self):
+        global player_ready
+        player_ready = 0
+        self._option_surfaces = self.option_backup
+        self._callbacks = self.callbacks_backup
+        self._current_option_index = self.current_option_backup
+
+    def name_input(self):
+        global player_name
+        print(1)
+        player_name = input()
+
+    def game_over(self):
+        global player_ready
+        player_ready = 0
+        screen.fill((255, 255, 255))
+        menu.deletemenu()
+        menu.draw(screen, 150, 200, 75)
+        menu.append_option('Играть снова', lambda: ready())
+        menu.append_option('Выйти в меню', lambda: menu.create_main())
+
+    def create_main(self):
+        menu.deletemenu()
+        menu.append_option('Старт', lambda: ready())
+        menu.append_option('Выбор уровней', lambda: menu.level_switcher())
+        menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
+        menu.append_option('Выход', quit)
 
 
-def ready():
-    global player_ready
-    player_ready = 1
+
+class Particle(pygame.sprite.Sprite):
+    # сгенерируем частицы разного размера
+    fire = [load_image("scrap.png")]
+    for scale in (5, 10, 20):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites)
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+
+        self.velocity = [dx, dy]
+        self.rect.x, self.rect.y = pos
+
+        self.gravity = GRAVITY
+
+    def update(self):
+        self.velocity[1] += self.gravity
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
 
 
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y):
+        super().__init__(all_sprites)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+        self.image = self.frames[self.cur_frame]
+
+
+
+player_name = ''
 score = 0
 player_ready = 0
 width, height = 600, 900
 screen_rect = (0, 0, width, height)
 
-ARIAL_50 = pygame.font.SysFont('arial', 50)
-font = pygame.font.SysFont('arial', 35)
+GRAVITY = 2
+ARIAL_50 = pygame.font.Font('PixelFont.ttf', 50)
+font = pygame.font.Font('PixelFont.ttf', 35)
 background = pygame.image.load('data/background.png')
 menu = Menu()
 
@@ -161,22 +318,30 @@ pygame.mixer.music.play(-1)
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
+heart = Lives(550, 25, 'data/heart/heart_1.png')
 bullet_image = pygame.image.load('data/bullet.png')
 player = Player(300, 800, 'data/player.png')
 enemy = Enemy(random.randint(0, 600), 0, 'data/enemy.png')
 
 menu.append_option('Старт', lambda: ready())
-menu.append_option('Выбор уровней', lambda: print('Выбор уровня'))
+menu.append_option('Выбор уровней', lambda: menu.level_switcher())
+menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
 menu.append_option('Выход', quit)
 
+all_sprites = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+
+
+enemy_group.add(enemy)
 
 while True:
+    player.damage()
     FPS = 60
     pygame.display.set_caption('Star Striker')
     pygame.display.update()
     clock.tick(FPS)
-    follow = font.render(f'Счёт: {score}', 1, ('black'))
+    follow = font.render(f'Счёт: {score}', 1, (139, 69, 19))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -187,13 +352,14 @@ while True:
 
     if player_ready == 0:
         screen.fill((0, 0, 0))
-        menu.draw(screen, 225, 200, 75)
+        menu.draw(screen, 150, 200, 75)
 
     else:
         menu.deletemenu()
         enemy.move()
         screen.blit(background, (0, 0))
         key_pressed = pygame.key.get_pressed()
+
         if key_pressed:
             player.move()
             player.strike()
@@ -205,9 +371,11 @@ while True:
                     player.strike()
                     sound_strike.play()
 
+        all_sprites.update()
+        all_sprites.draw(screen)
         bullet_group.update()
         bullet_group.draw(screen)
         screen.blit(enemy.image, enemy.rect)
         screen.blit(player.image, player.rect)
+        screen.blit(heart.image, heart.rect)
         screen.blit(follow, (0, 0))
-        screen.blit((font.render(f'Жизни: {player.health}', 1, ('black'))), (450, 850))
