@@ -1,10 +1,22 @@
+import json
 import os
 import sys
-
 import pygame
 import random
 
 pygame.init()
+
+def input_check():
+    global need_input
+    if need_input == True:
+        need_input = False
+    else:
+        need_input = True
+
+def print_text(message, x, y, font_color=(255, 255, 255), font_type='PixelFont.ttf', font_size=50):
+    font_type = pygame.font.Font(font_type, font_size)
+    text = font_type.render(message, True, font_color)
+    screen.blit(text, (x, y))
 
 
 def ready():
@@ -64,13 +76,16 @@ class Player(pygame.sprite.Sprite):
         score -= 50
 
     def damage(self):
+        global score
         if pygame.sprite.spritecollideany(player, enemy_group):
             enemy.killed()
             if self.health < 1:
                 menu.game_over()
+                Lives.check_lives(3)
             else:
                 self.health -= 1
                 Lives.check_lives(self.health)
+                score -= 25
                 self.create_new()
 
     def create_new(self):
@@ -173,7 +188,7 @@ class Menu:
     def select(self):
         global player_ready
         if player_ready == 0:
-            self._callbacks[self._current_option_index]()
+            player_ready = 1
 
     def draw(self, surf, x, y, padding):
         for i, option in enumerate(self._option_surfaces):
@@ -210,8 +225,9 @@ class Menu:
             quit()
 
     def leaderboard(self):
+        global high_scores
         menu.deletemenu()
-        menu.append_option(f'{player_name} - 1000', lambda: menu.name_input())
+        menu.append_option(f'Лучший результат - {high_scores}', None)
         menu.append_option('Назад', lambda: menu.back())
 
     def level_switcher(self):
@@ -233,7 +249,7 @@ class Menu:
         player_name = input()
 
     def game_over(self):
-        global player_ready
+        global player_ready, high_scores
         player_ready = 0
         screen.fill((255, 255, 255))
         menu.deletemenu()
@@ -298,6 +314,9 @@ class AnimatedSprite(pygame.sprite.Sprite):
 
 
 
+need_input = False
+input_text = ''
+
 player_name = ''
 score = 0
 player_ready = 0
@@ -332,7 +351,6 @@ all_sprites = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 
-
 enemy_group.add(enemy)
 
 while True:
@@ -361,15 +379,28 @@ while True:
         key_pressed = pygame.key.get_pressed()
 
         if key_pressed:
+            if key_pressed[pygame.K_TAB]: # Ввод слов
+                input_check()
             player.move()
             player.strike()
-            if key_pressed[pygame.K_ESCAPE]:
-                quit()
+
+
+            print_text(input_text, 100, 400)
         for event in pygame.event.get():
+            if need_input and event.type == pygame.KEYDOWN: # Ввод слов
+                if event.key == pygame.K_SLASH:
+                    need_input = False
+                    input_text = ''
+                elif event.key == pygame.K_BACKSPACE:
+                    input_text = input_text[:-1]
+                else:
+                    if len(input_text) < 10:
+                        input_text += event.unicode
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.strike()
                     sound_strike.play()
+
 
         all_sprites.update()
         all_sprites.draw(screen)
