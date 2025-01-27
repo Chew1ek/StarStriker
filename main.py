@@ -1,9 +1,28 @@
 import os
 import sys
+
 import pygame
 import random
+import csv
 
-pygame.init()
+
+
+all_sprites = pygame.sprite.Group()
+bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+
+player = None
+
+def ready():
+    global player_ready
+    player_ready = 1
+
+def create_player():
+    global player
+    player = Player(300, 800, 'data/player_anim.png', 2, 1)
+    all_sprites.add(player)
+    player.create_new()
+
 
 def input_check():
     global need_input
@@ -12,16 +31,22 @@ def input_check():
     else:
         need_input = True
 
+
 def print_text(message, x, y, font_color=(255, 255, 255), font_type='PixelFont.ttf', font_size=50):
     font_type = pygame.font.Font(font_type, font_size)
     text = font_type.render(message, True, font_color)
     screen.blit(text, (x, y))
 
 
-def ready():
-    global player_ready
+def level1():
+    global level, player_ready
     player_ready = 1
+    level = 1
 
+def level2():
+    global level, player_ready
+    player_ready = 1
+    level = 2
 
 def load_image(name):
     fullname = os.path.join('data', name)
@@ -39,20 +64,46 @@ def create_particles(position):
         Particle(position, random.choice(numbers), random.choice(numbers))
 
 
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y):
+        super().__init__(all_sprites)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, health=3):
-        pygame.sprite.Sprite.__init__(self)
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
 
+    # def update(self):
+    #     self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+    #     self.image = self.frames[self.cur_frame]
+
+
+class Player(AnimatedSprite):
+    def __init__(self, x, y, sheet_path, columns, rows, health=3):
+        sheet = pygame.image.load(sheet_path)
+        super().__init__(sheet, columns, rows, x, y)
         self.health = health
-        self.image = pygame.image.load(image)
-        self.rect = self.image.get_rect(center = (x, y))
+        self.is_be_damaged = False
+        self.iter = 0
+        self.player_damage = 0
+        self.duration = 6
 
     def move(self):
+        global key_pressed
+        key_pressed = pygame.key.get_pressed()
         if key_pressed[pygame.K_d]:
-            self.rect.x += 5
+            self.rect.x += 7
         if key_pressed[pygame.K_a]:
-            self.rect.x -= 5
+            self.rect.x -= 7
         if player.rect.left < 0:
             self.rect.left = 0
         if player.rect.right > width:
@@ -75,7 +126,7 @@ class Player(pygame.sprite.Sprite):
         score -= 50
 
     def damage(self):
-        global score
+        global score, player_damage
         if pygame.sprite.spritecollideany(player, enemy_group):
             enemy.killed()
             if self.health < 1:
@@ -88,14 +139,31 @@ class Player(pygame.sprite.Sprite):
                 self.create_new()
 
     def create_new(self):
-        global player
-        player = Player(300, 800, 'data/player.png', self.health)
+        global player, player_damage
+        all_sprites.remove(self)
+        player = Player(300, 800, 'data/player_anim.png', 2, 1, self.health)
+        all_sprites.add(player)
         create_particles((self.rect.x, self.rect.y))
+        player_damage = 1
+
+    def update(self):
+        global player_damage
+        super().update()
+        if self.iter > 30:
+            if player_damage == 1:
+                self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+                self.image = self.frames[self.cur_frame]
+                self.duration -= 1
+                if self.duration == 0:
+                    player_damage = 0
+                self.iter = 0
+        self.iter += tick
+
 
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, speed=3, health=3):
+    def __init__(self, x, y, image, speed=5, health=2):
         pygame.sprite.Sprite.__init__(self)
 
         self.speed = speed
@@ -112,7 +180,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def create_new(self):
         global enemy
-        enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
+        enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 5)
         enemy_group.add(enemy)
 
     def damage(self):
@@ -130,17 +198,17 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, pos, image, speed=-10, bullet_type=0):
+    def __init__(self, pos, image, speed=-20, bullet_type=0):
         super().__init__()
         self.image = image
         self.rect = self.image.get_rect()
-        self.rect.center = (pos)
+        self.rect.center = pos
         self.speedy = speed
         self.type = bullet_type
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > height or self.rect.bottom < 0:
+        if self.rect.top < 0:
             self.kill()
 
     def killed(self):
@@ -178,8 +246,6 @@ class Menu:
         if player_ready == 0:
             self._option_surfaces.append(ARIAL_50.render(option, True ,('white')))
             self._callbacks.append(callback)
-        else:
-            pass
 
     def switch(self, direction):
         self._current_option_index = max(0, min(self._current_option_index + direction, len(self._option_surfaces) - 1))
@@ -187,9 +253,10 @@ class Menu:
     def select(self):
         global player_ready
         if player_ready == 0:
-            player_ready = 1
+            self._callbacks[self._current_option_index]()
 
     def draw(self, surf, x, y, padding):
+        global game_over
         for i, option in enumerate(self._option_surfaces):
             option_rect = option.get_rect()
             option_rect.topleft = (x, y + i * padding)
@@ -199,6 +266,8 @@ class Menu:
                 else:
                     pygame.draw.rect(surf, ('red'), option_rect)
             surf.blit(option, option_rect)
+        if game_over == 1:
+            screen.blit(game_over_render, (0, 0))
 
     def deletemenu(self):
         self.option_backup = self._option_surfaces
@@ -217,7 +286,7 @@ class Menu:
             global player, enemy, score
             score = 0
             enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
-            player = Player(300, 800, 'data/player.png')
+            player = Player(300, 800, 'data/player_anim.png', 2, 1)
             enemy_group.add(enemy)
             menu.select()
         if event.key == pygame.K_ESCAPE:
@@ -226,13 +295,20 @@ class Menu:
     def leaderboard(self):
         global high_scores
         menu.deletemenu()
-        menu.append_option(f'Лучший результат - {high_scores}', None)
+
+        with open('leader.csv', newline='') as csvfile:
+            leader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+            for row in leader:
+                screen.blit((font.render(f'Результат - {", ".join(row)}', 1, (255, 255, 255))), (100, 100))
+
         menu.append_option('Назад', lambda: menu.back())
+
+
 
     def level_switcher(self):
         menu.deletemenu()
-        menu.append_option('Уровень 1', lambda: print('Уровень 1'))
-        menu.append_option('Уровень 2', lambda: print('Уровень 2'))
+        menu.append_option('Уровень 1', lambda: level1())
+        menu.append_option('Уровень 2', lambda: level2())
         menu.append_option('Назад', lambda: menu.back())
 
     def back(self):
@@ -243,18 +319,47 @@ class Menu:
         self._current_option_index = self.current_option_backup
 
     def name_input(self):
-        global player_name
-        print(1)
-        player_name = input()
+        global player_name, score, need_input, input_text, player_ready
+        menu.deletemenu()
+        menu.append_option('Назад', lambda: menu.back())
+        need_input = True
+
+        while need_input:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN: # Ввод слов
+                    if event.key == pygame.K_SLASH:
+                        need_input = False
+                        input_text = ''
+                    elif event.key == pygame.K_BACKSPACE:
+                        input_text = input_text[:-1]
+                    else:
+                        if len(input_text) < 10:
+                            input_text += event.unicode
+                            print(input_text)
+                        else:
+                            need_input = False
+
+        menu.append_option(input_text, quit)
+        print_text(input_text, 100, 400)
+
+
+
+
+        # with open('leader.csv', 'w', newline='') as csvfile:
+        #     leader_writer = csv.writer(csvfile, delimiter=' ',
+        #                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #     leader_writer.writerow([input_text + score])
 
     def game_over(self):
-        global player_ready, high_scores
+        global player_ready, high_scores, game_over_render
         player_ready = 0
         screen.fill((255, 255, 255))
         menu.deletemenu()
         menu.draw(screen, 150, 200, 75)
         menu.append_option('Играть снова', lambda: ready())
+        menu.append_option('Дальше', lambda: level2())
         menu.append_option('Выйти в меню', lambda: menu.create_main())
+
 
     def create_main(self):
         menu.deletemenu()
@@ -262,7 +367,7 @@ class Menu:
         menu.append_option('Выбор уровней', lambda: menu.level_switcher())
         menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
         menu.append_option('Выход', quit)
-
+        menu.append_option('1', lambda: menu.game_over())
 
 
 class Particle(pygame.sprite.Sprite):
@@ -289,28 +394,7 @@ class Particle(pygame.sprite.Sprite):
             self.kill()
 
 
-class AnimatedSprite(pygame.sprite.Sprite):
-    def __init__(self, sheet, columns, rows, x, y):
-        super().__init__(all_sprites)
-        self.frames = []
-        self.cut_sheet(sheet, columns, rows)
-        self.cur_frame = 0
-        self.image = self.frames[self.cur_frame]
-        self.rect = self.rect.move(x, y)
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        for j in range(rows):
-            for i in range(columns):
-                frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-
-    def update(self):
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-        self.image = self.frames[self.cur_frame]
-
+pygame.init()
 
 
 need_input = False
@@ -322,11 +406,21 @@ player_ready = 0
 width, height = 600, 900
 screen_rect = (0, 0, width, height)
 
+level = 0
+
 GRAVITY = 2
 ARIAL_50 = pygame.font.Font('PixelFont.ttf', 50)
 font = pygame.font.Font('PixelFont.ttf', 35)
 background = pygame.image.load('data/background.png')
+background2 = pygame.image.load('data/background2.png')
+game_over_font = pygame.font.Font('PixelFont.ttf', 80)
+game_over_render = game_over_font.render('ИГРА ОКОНЧЕНА', 1, (255, 255, 255))
+game_over = 0
+
 menu = Menu()
+menu.create_main()
+
+player_damage = 0
 
 sound_strike = pygame.mixer.Sound('sounds/strike.wav')
 pygame.mixer.music.load('sounds/fon.wav')
@@ -338,74 +432,83 @@ clock = pygame.time.Clock()
 
 heart = Lives(550, 25, 'data/heart/heart_1.png')
 bullet_image = pygame.image.load('data/bullet.png')
-player = Player(300, 800, 'data/player.png')
-enemy = Enemy(random.randint(0, 600), 0, 'data/enemy.png')
-
-menu.append_option('Старт', lambda: ready())
-menu.append_option('Выбор уровней', lambda: menu.level_switcher())
-menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
-menu.append_option('Выход', quit)
-
-all_sprites = pygame.sprite.Group()
-bullet_group = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
+enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png')
 
 enemy_group.add(enemy)
 
 while True:
-    player.damage()
+    tick = clock.tick()
     FPS = 60
     pygame.display.set_caption('Star Striker')
     pygame.display.update()
     clock.tick(FPS)
     follow = font.render(f'Счёт: {score}', 1, (139, 69, 19))
+    key_pressed = pygame.key.get_pressed()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit()
-        elif event.type == pygame.KEYDOWN:
-            menu.menu_swap()
-
 
     if player_ready == 0:
         screen.fill((0, 0, 0))
         menu.draw(screen, 150, 200, 75)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+            if event.type == pygame.KEYDOWN:
+                menu.menu_swap()
 
-    else:
+    elif player_ready == 1:
+        if player is None:
+            create_player()
+        player.move()
+        player.damage()
         menu.deletemenu()
         enemy.move()
         screen.blit(background, (0, 0))
-        key_pressed = pygame.key.get_pressed()
-
-        if key_pressed:
-            if key_pressed[pygame.K_TAB]: # Ввод слов
-                input_check()
-            player.move()
-            player.strike()
-
-
-            print_text(input_text, 100, 400)
-        for event in pygame.event.get():
-            if need_input and event.type == pygame.KEYDOWN: # Ввод слов
-                if event.key == pygame.K_SLASH:
-                    need_input = False
-                    input_text = ''
-                elif event.key == pygame.K_BACKSPACE:
-                    input_text = input_text[:-1]
-                else:
-                    if len(input_text) < 10:
-                        input_text += event.unicode
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    player.strike()
-                    sound_strike.play()
-
-
-        all_sprites.update()
-        all_sprites.draw(screen)
         bullet_group.update()
         bullet_group.draw(screen)
         screen.blit(enemy.image, enemy.rect)
         screen.blit(player.image, player.rect)
         screen.blit(heart.image, heart.rect)
         screen.blit(follow, (0, 0))
+        all_sprites.update()
+        all_sprites.draw(screen)
+        player.strike()
+
+
+        if key_pressed:
+            if key_pressed[pygame.K_TAB]: # Ввод слов
+                input_check()
+
+        if score >= 1000:
+            menu.game_over()
+
+    else:
+        menu.deletemenu()
+        enemy.move()
+        screen.blit(background2, (0, 0))
+        bullet_group.update()
+        bullet_group.draw(screen)
+        screen.blit(enemy.image, enemy.rect)
+        screen.blit(player.image, player.rect)
+        screen.blit(heart.image, heart.rect)
+        screen.blit(follow, (0, 0))
+        all_sprites.update()
+        all_sprites.draw(screen)
+
+
+        if key_pressed:
+            if key_pressed[pygame.K_TAB]:  # Ввод слов
+                input_check()
+
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player.strike()
+                    sound_strike.play()
+
+
+        if score >= 1500:
+            game_over = 1
+            menu.game_over()
