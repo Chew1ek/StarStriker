@@ -13,8 +13,13 @@ enemy_group = pygame.sprite.Group()
 
 player = None
 
+def total_game_over():
+    pass
+
 def ready():
-    global player_ready
+    global player_ready, end_game
+    end_game = False
+    menu.deletemenu()
     player_ready = 1
 
 def create_player():
@@ -39,12 +44,14 @@ def print_text(message, x, y, font_color=(255, 255, 255), font_type='PixelFont.t
 
 
 def level1():
-    global level, player_ready
+    global level, player_ready, end_game
+    end_game = False
     player_ready = 1
     level = 1
 
 def level2():
-    global level, player_ready
+    global level, player_ready, end_game
+    end_game = False
     player_ready = 1
     level = 2
 
@@ -283,14 +290,16 @@ class Menu:
         if event.key == pygame.K_s:
             menu.switch(1)
         if event.key == pygame.K_RETURN:
-            global player, enemy, score
-            score = 0
-            enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
-            player = Player(300, 800, 'data/player_anim.png', 2, 1)
-            enemy_group.add(enemy)
-            menu.select()
+            global player, enemy, score, player_ready
+            if player_ready == 0:
+                score = 0
+                enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
+                player = Player(300, 800, 'data/player_anim.png', 2, 1)
+                enemy_group.add(enemy)
+                menu.select()
         if event.key == pygame.K_ESCAPE:
             quit()
+
 
     def leaderboard(self):
         global high_scores
@@ -312,7 +321,8 @@ class Menu:
         menu.append_option('Назад', lambda: menu.back())
 
     def back(self):
-        global player_ready
+        global player_ready, end_game
+        end_game = False
         player_ready = 0
         self._option_surfaces = self.option_backup
         self._callbacks = self.callbacks_backup
@@ -351,9 +361,10 @@ class Menu:
         #     leader_writer.writerow([input_text + score])
 
     def game_over(self):
-        global player_ready, high_scores, game_over_render
+        global player_ready, high_scores, end_game
         player_ready = 0
-        screen.fill((255, 255, 255))
+        end_game = True
+        total_game_over()
         menu.deletemenu()
         menu.draw(screen, 150, 200, 75)
         menu.append_option('Играть снова', lambda: ready())
@@ -407,6 +418,7 @@ width, height = 600, 900
 screen_rect = (0, 0, width, height)
 
 level = 0
+end_game = False
 
 GRAVITY = 2
 ARIAL_50 = pygame.font.Font('PixelFont.ttf', 50)
@@ -414,7 +426,7 @@ font = pygame.font.Font('PixelFont.ttf', 35)
 background = pygame.image.load('data/background.png')
 background2 = pygame.image.load('data/background2.png')
 game_over_font = pygame.font.Font('PixelFont.ttf', 80)
-game_over_render = game_over_font.render('ИГРА ОКОНЧЕНА', 1, (255, 255, 255))
+game_over_render = game_over_font.render('ИГРА ОКОНЧЕНА', 1, (205, 92, 92))
 game_over = 0
 
 menu = Menu()
@@ -434,6 +446,7 @@ heart = Lives(550, 25, 'data/heart/heart_1.png')
 bullet_image = pygame.image.load('data/bullet.png')
 enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png')
 
+# all_sprites.add(player)
 enemy_group.add(enemy)
 
 while True:
@@ -448,10 +461,14 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit()
+        elif event.type == pygame.KEYDOWN:
+            menu.menu_swap()
 
     if player_ready == 0:
         screen.fill((0, 0, 0))
-        menu.draw(screen, 150, 200, 75)
+        menu.draw(screen, 150, 350, 75)
+        if end_game == True:
+            screen.blit(game_over_render, (15, 200))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
