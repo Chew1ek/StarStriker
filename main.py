@@ -373,7 +373,9 @@ class Menu:
 
 
     def create_main(self):
+        global end_game
         menu.deletemenu()
+        end_game = False
         menu.append_option('Старт', lambda: ready())
         menu.append_option('Выбор уровней', lambda: menu.level_switcher())
         menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
