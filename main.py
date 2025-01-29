@@ -13,17 +13,19 @@ enemy_group = pygame.sprite.Group()
 
 player = None
 
-def total_game_over():
-    pass
 
 def ready():
-    global player_ready, end_game
-    end_game = False
+    global player_ready, end_game, player
+    end_game = ''
     menu.deletemenu()
+    all_sprites.remove(player)
+    player = Player(300, 800, 'data/player_anim.png', 2, 1)
+    all_sprites.add(player)
     player_ready = 1
 
 def create_player():
     global player
+    all_sprites.remove(player)
     player = Player(300, 800, 'data/player_anim.png', 2, 1)
     all_sprites.add(player)
     player.create_new()
@@ -44,14 +46,17 @@ def print_text(message, x, y, font_color=(255, 255, 255), font_type='PixelFont.t
 
 
 def level1():
-    global level, player_ready, end_game
-    end_game = False
+    global player_ready, end_game, player
+    end_game = ''
+    menu.deletemenu()
+    all_sprites.remove(player)
+    player = Player(300, 800, 'data/player_anim.png', 2, 1)
+    all_sprites.add(player)
     player_ready = 1
-    level = 1
 
 def level2():
     global level, player_ready, end_game
-    end_game = False
+    end_game = ''
     player_ready = 1
     level = 2
 
@@ -133,10 +138,12 @@ class Player(AnimatedSprite):
         score -= 50
 
     def damage(self):
-        global score, player_damage
+        global score, player_damage, game_over
         if pygame.sprite.spritecollideany(player, enemy_group):
             enemy.killed()
             if self.health < 1:
+                # game_over = 1
+                # menu.deletemenu()
                 menu.game_over()
                 Lives.check_lives(3)
             else:
@@ -147,7 +154,7 @@ class Player(AnimatedSprite):
 
     def create_new(self):
         global player, player_damage
-        all_sprites.remove(self)
+        all_sprites.remove(player)
         player = Player(300, 800, 'data/player_anim.png', 2, 1, self.health)
         all_sprites.add(player)
         create_particles((self.rect.x, self.rect.y))
@@ -250,9 +257,8 @@ class Menu:
         self._current_option_index = 0
 
     def append_option(self, option, callback):
-        if player_ready == 0:
-            self._option_surfaces.append(ARIAL_50.render(option, True ,('white')))
-            self._callbacks.append(callback)
+        self._option_surfaces.append(ARIAL_50.render(option, True ,(255, 255, 255)))
+        self._callbacks.append(callback)
 
     def switch(self, direction):
         self._current_option_index = max(0, min(self._current_option_index + direction, len(self._option_surfaces) - 1))
@@ -268,13 +274,8 @@ class Menu:
             option_rect = option.get_rect()
             option_rect.topleft = (x, y + i * padding)
             if i == self._current_option_index:
-                if player_ready == 0:
-                    pygame.draw.rect(surf, ('blue'), option_rect)
-                else:
-                    pygame.draw.rect(surf, ('red'), option_rect)
+                pygame.draw.rect(surf, ('blue'), option_rect)
             surf.blit(option, option_rect)
-        if game_over == 1:
-            screen.blit(game_over_render, (0, 0))
 
     def deletemenu(self):
         self.option_backup = self._option_surfaces
@@ -294,7 +295,6 @@ class Menu:
             if player_ready == 0:
                 score = 0
                 enemy = Enemy(random.randint(0, width), 0, 'data/enemy.png')
-                player = Player(300, 800, 'data/player_anim.png', 2, 1)
                 enemy_group.add(enemy)
                 menu.select()
         if event.key == pygame.K_ESCAPE:
@@ -304,6 +304,7 @@ class Menu:
     def leaderboard(self):
         global high_scores
         menu.deletemenu()
+        screen.blit(game_over_render, (15, 200))
 
         with open('leader.csv', newline='') as csvfile:
             leader = csv.reader(csvfile, delimiter=' ', quotechar='|')
@@ -322,8 +323,8 @@ class Menu:
 
     def back(self):
         global player_ready, end_game
-        end_game = False
         player_ready = 0
+        end_game = ''
         self._option_surfaces = self.option_backup
         self._callbacks = self.callbacks_backup
         self._current_option_index = self.current_option_backup
@@ -337,11 +338,10 @@ class Menu:
         while need_input:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN: # Ввод слов
-                    if event.key == pygame.K_SLASH:
-                        need_input = False
-                        input_text = ''
-                    elif event.key == pygame.K_BACKSPACE:
+                    if event.key == pygame.K_BACKSPACE:
                         input_text = input_text[:-1]
+                    elif event.key == pygame.K_SLASH:
+                        need_input = False
                     else:
                         if len(input_text) < 10:
                             input_text += event.unicode
@@ -362,24 +362,24 @@ class Menu:
 
     def game_over(self):
         global player_ready, high_scores, end_game
-        player_ready = 0
-        end_game = True
-        total_game_over()
         menu.deletemenu()
-        menu.draw(screen, 150, 200, 75)
+        player_ready = 0
+        end_game = 'end game'
         menu.append_option('Играть снова', lambda: ready())
         menu.append_option('Дальше', lambda: level2())
         menu.append_option('Выйти в меню', lambda: menu.create_main())
+        menu.draw(screen, 150, 200, 75)
 
 
     def create_main(self):
         global end_game
         menu.deletemenu()
-        end_game = False
+        end_game = ''
         menu.append_option('Старт', lambda: ready())
         menu.append_option('Выбор уровней', lambda: menu.level_switcher())
         menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
         menu.append_option('Выход', quit)
+        menu.append_option('Ввод имени', lambda: menu.name_input())
         menu.append_option('1', lambda: menu.game_over())
 
 
@@ -420,7 +420,7 @@ width, height = 600, 900
 screen_rect = (0, 0, width, height)
 
 level = 0
-end_game = False
+end_game = ''
 
 GRAVITY = 2
 ARIAL_50 = pygame.font.Font('PixelFont.ttf', 50)
@@ -469,22 +469,23 @@ while True:
     if player_ready == 0:
         screen.fill((0, 0, 0))
         menu.draw(screen, 150, 350, 75)
-        if end_game == True:
+        if end_game == 'end game':
             screen.blit(game_over_render, (15, 200))
+            # menu.game_over()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
             if event.type == pygame.KEYDOWN:
                 menu.menu_swap()
 
-    elif player_ready == 1:
+    elif player_ready == 1 and level < 2:
+        screen.blit(background, (0, 0))
         if player is None:
             create_player()
         player.move()
         player.damage()
         menu.deletemenu()
         enemy.move()
-        screen.blit(background, (0, 0))
         bullet_group.update()
         bullet_group.draw(screen)
         screen.blit(enemy.image, enemy.rect)
@@ -503,7 +504,13 @@ while True:
         if score >= 1000:
             menu.game_over()
 
+
     else:
+        if player is None:
+            create_player()
+
+        player.move()
+        player.damage()
         menu.deletemenu()
         enemy.move()
         screen.blit(background2, (0, 0))
@@ -515,6 +522,7 @@ while True:
         screen.blit(follow, (0, 0))
         all_sprites.update()
         all_sprites.draw(screen)
+        player.strike()
 
 
         if key_pressed:
