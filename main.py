@@ -378,8 +378,6 @@ class Menu:
         menu.append_option('Выбор уровней', lambda: menu.level_switcher())
         menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
         menu.append_option('Выход', quit)
-        menu.append_option('Ввод имени', lambda: menu.name_input())
-        menu.append_option('1', lambda: menu.game_over())
 
 
 class Particle(pygame.sprite.Sprite):
@@ -471,14 +469,6 @@ while True:
         if player_ready == 0:
             screen.fill((0, 0, 0))
             menu.draw(screen, 150, 450, 60)
-            # if end_game == 'end game':
-            #     screen.blit(game_over_render, (15, 200))
-            #     # menu.game_over()
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    exit()
-                if event.type == pygame.KEYDOWN:
-                    menu.menu_swap()
 
     if flag == 'play':
         for event in pygame.event.get():
@@ -522,6 +512,7 @@ while True:
                     input_check()
 
             if score >= 1000:
+                screen.fill((0, 0, 0))
                 menu.game_over()
 
 
@@ -560,30 +551,35 @@ while True:
 
     if flag == 'game_over':
         if player_ready == 0:
-            # screen.fill((0, 0, 0))
-            # if end_game == 'end game':
-            #     screen.blit(game_over_render, (15, 200))
-            #     # menu.game_over()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        flag = 'leader'
+                        flag = 'menu'
+                        with open('leader.csv', 'r',  newline='') as csvfile:
+                            leader = csv.reader(csvfile, delimiter=';', quotechar='|')
+                            spisok = []
+                            for row in leader:
+                                spisok.append([row[0], int(row[1])])
+                            spisok.append([input_text, score])
+                            spisok.sort(key=lambda x: x[1], reverse=True)
+
                         with open('leader.csv', 'w', newline='') as csvfile:
-                            # Открываем файл, сохраняем все что есть
-                            # Сортировка по очкам
-                            # Запись в csv
-                            leader_writer = csv.writer(csvfile, delimiter=';',
-                                                       quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                            leader_writer.writerow([input_text, score])
+                           leader_writer = csv.writer(csvfile, delimiter=';', quotechar='|')
+                           a = 1
+                           for row in spisok:
+                               if a < 11:
+                                   leader_writer.writerow(row)
+                                   a += 1
+
+
                     elif event.key == pygame.K_BACKSPACE:
                         input_text = input_text[:-1]
                         #screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
                     else:
                         if len(input_text) < 10:
                             input_text += event.unicode
-                    screen.fill((0, 0, 0))
                     screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
         screen.blit((ARIAL_50.render(f'Введите имя', 1, (255, 255, 255))), (150, 400))
 
