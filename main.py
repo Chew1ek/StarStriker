@@ -15,13 +15,14 @@ player = None
 
 
 def ready():
-    global player_ready, end_game, player
+    global flag, player_ready, end_game, player
     end_game = ''
     menu.deletemenu()
     all_sprites.remove(player)
     player = Player(300, 800, 'data/player_anim.png', 2, 1)
     all_sprites.add(player)
     player_ready = 1
+    flag = 'play'
 
 def create_player():
     global player
@@ -138,12 +139,12 @@ class Player(AnimatedSprite):
         score -= 50
 
     def damage(self):
-        global score, player_damage, game_over
+        global score, player_damage, game_over, flag, player_ready
         if pygame.sprite.spritecollideany(player, enemy_group):
             enemy.killed()
             if self.health < 1:
-                # game_over = 1
-                # menu.deletemenu()
+                #game_over = 1
+                #menu.deletemenu()
                 menu.game_over()
                 Lives.check_lives(3)
             else:
@@ -302,16 +303,17 @@ class Menu:
 
 
     def leaderboard(self):
-        global high_scores
+        global high_scores, flag
+        flag = 'leader'
         menu.deletemenu()
-        screen.blit(game_over_render, (15, 200))
+        menu.append_option('', lambda: menu.back())
+        menu.append_option('', lambda: menu.back())
+        menu.append_option('', lambda: menu.back())
+        menu.append_option('', lambda: menu.back())
+        menu.append_option('', lambda: menu.back())
+        menu.append_option('', lambda: menu.back())
+        menu.append_option('Enter - выход', lambda: menu.back())
 
-        with open('leader.csv', newline='') as csvfile:
-            leader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-            for row in leader:
-                screen.blit((font.render(f'Результат - {", ".join(row)}', 1, (255, 255, 255))), (100, 100))
-
-        menu.append_option('Назад', lambda: menu.back())
 
 
 
@@ -322,7 +324,8 @@ class Menu:
         menu.append_option('Назад', lambda: menu.back())
 
     def back(self):
-        global player_ready, end_game
+        global player_ready, end_game, flag
+        flag = 'menu'
         player_ready = 0
         end_game = ''
         self._option_surfaces = self.option_backup
@@ -354,21 +357,17 @@ class Menu:
 
 
 
-
-        # with open('leader.csv', 'w', newline='') as csvfile:
-        #     leader_writer = csv.writer(csvfile, delimiter=' ',
-        #                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     leader_writer.writerow([input_text + score])
-
     def game_over(self):
-        global player_ready, high_scores, end_game
+        global player_ready, high_scores, end_game, flag
         menu.deletemenu()
         player_ready = 0
-        end_game = 'end game'
+        #end_game = 'end game'
+        flag = 'game_over'
         menu.append_option('Играть снова', lambda: ready())
         menu.append_option('Дальше', lambda: level2())
         menu.append_option('Выйти в меню', lambda: menu.create_main())
-        menu.draw(screen, 150, 200, 75)
+       # menu.draw(screen, 150, 400, 75)
+
 
 
     def create_main(self):
@@ -431,6 +430,8 @@ game_over_font = pygame.font.Font('PixelFont.ttf', 80)
 game_over_render = game_over_font.render('ИГРА ОКОНЧЕНА', 1, (205, 92, 92))
 game_over = 0
 
+flag = 'menu'
+
 menu = Menu()
 menu.create_main()
 
@@ -460,82 +461,146 @@ while True:
     follow = font.render(f'Счёт: {score}', 1, (139, 69, 19))
     key_pressed = pygame.key.get_pressed()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            exit()
-        elif event.type == pygame.KEYDOWN:
-            menu.menu_swap()
-
-    if player_ready == 0:
-        screen.fill((0, 0, 0))
-        menu.draw(screen, 150, 350, 75)
-        if end_game == 'end game':
-            screen.blit(game_over_render, (15, 200))
-            # menu.game_over()
+    if flag == 'menu':
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
-            if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:
                 menu.menu_swap()
 
-    elif player_ready == 1 and level < 2:
-        screen.blit(background, (0, 0))
-        if player is None:
-            create_player()
-        player.move()
-        player.damage()
-        menu.deletemenu()
-        enemy.move()
-        bullet_group.update()
-        bullet_group.draw(screen)
-        screen.blit(enemy.image, enemy.rect)
-        screen.blit(player.image, player.rect)
-        screen.blit(heart.image, heart.rect)
-        screen.blit(follow, (0, 0))
-        all_sprites.update()
-        all_sprites.draw(screen)
-        player.strike()
+        if player_ready == 0:
+            screen.fill((0, 0, 0))
+            menu.draw(screen, 150, 450, 60)
+            # if end_game == 'end game':
+            #     screen.blit(game_over_render, (15, 200))
+            #     # menu.game_over()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    exit()
+                if event.type == pygame.KEYDOWN:
+                    menu.menu_swap()
 
-
-        if key_pressed:
-            if key_pressed[pygame.K_TAB]: # Ввод слов
-                input_check()
-
-        if score >= 1000:
-            menu.game_over()
-
-
-    else:
-        if player is None:
-            create_player()
-
-        player.move()
-        player.damage()
-        menu.deletemenu()
-        enemy.move()
-        screen.blit(background2, (0, 0))
-        bullet_group.update()
-        bullet_group.draw(screen)
-        screen.blit(enemy.image, enemy.rect)
-        screen.blit(player.image, player.rect)
-        screen.blit(heart.image, heart.rect)
-        screen.blit(follow, (0, 0))
-        all_sprites.update()
-        all_sprites.draw(screen)
-        player.strike()
-
-
-        if key_pressed:
-            if key_pressed[pygame.K_TAB]:  # Ввод слов
-                input_check()
-
+    if flag == 'play':
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    player.strike()
-                    sound_strike.play()
+            if event.type == pygame.QUIT:
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                menu.menu_swap()
+
+        if player_ready == 0:
+            screen.fill((0, 0, 0))
+            # menu.draw(screen, 150, 350, 75)
+            if end_game == 'end game':
+                screen.blit(game_over_render, (15, 200))
+                # menu.game_over()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    exit()
+                if event.type == pygame.KEYDOWN:
+                    menu.menu_swap()
+
+        elif player_ready == 1 and level < 2:
+            screen.blit(background, (0, 0))
+            if player is None:
+                create_player()
+            player.move()
+            player.damage()
+            menu.deletemenu()
+            enemy.move()
+            bullet_group.update()
+            bullet_group.draw(screen)
+            screen.blit(enemy.image, enemy.rect)
+            screen.blit(player.image, player.rect)
+            screen.blit(heart.image, heart.rect)
+            screen.blit(follow, (0, 0))
+            all_sprites.update()
+            all_sprites.draw(screen)
+            player.strike()
+
+            if key_pressed:
+                if key_pressed[pygame.K_TAB]:  # Ввод слов
+                    input_check()
+
+            if score >= 1000:
+                menu.game_over()
 
 
-        if score >= 1500:
-            game_over = 1
-            menu.game_over()
+        else:
+            if player is None:
+                create_player()
+
+            player.move()
+            player.damage()
+            menu.deletemenu()
+            enemy.move()
+            screen.blit(background2, (0, 0))
+            bullet_group.update()
+            bullet_group.draw(screen)
+            screen.blit(enemy.image, enemy.rect)
+            screen.blit(player.image, player.rect)
+            screen.blit(heart.image, heart.rect)
+            screen.blit(follow, (0, 0))
+            all_sprites.update()
+            all_sprites.draw(screen)
+            player.strike()
+
+            if key_pressed:
+                if key_pressed[pygame.K_TAB]:  # Ввод слов
+                    input_check()
+
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        player.strike()
+                        sound_strike.play()
+
+            if score >= 1500:
+                game_over = 1
+                menu.game_over()
+
+    if flag == 'game_over':
+        if player_ready == 0:
+            # screen.fill((0, 0, 0))
+            # if end_game == 'end game':
+            #     screen.blit(game_over_render, (15, 200))
+            #     # menu.game_over()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        flag = 'leader'
+                        with open('leader.csv', 'w', newline='') as csvfile:
+                            # Открываем файл, сохраняем все что есть
+                            # Сортировка по очкам
+                            # Запись в csv
+                            leader_writer = csv.writer(csvfile, delimiter=';',
+                                                       quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                            leader_writer.writerow([input_text, score])
+                    elif event.key == pygame.K_BACKSPACE:
+                        input_text = input_text[:-1]
+                        #screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
+                    else:
+                        if len(input_text) < 10:
+                            input_text += event.unicode
+                    screen.fill((0, 0, 0))
+                    screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
+        screen.blit((ARIAL_50.render(f'Введите имя', 1, (255, 255, 255))), (150, 400))
+
+
+    if flag == 'leader':
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                menu.menu_swap()
+
+        screen.blit((ARIAL_50.render(f'Таблица результатов', 1, (255, 255, 255))), (15, 50))
+        with open('leader.csv', newline='') as csvfile:
+            leader = csv.reader(csvfile, delimiter=';', quotechar='|')
+            c = 1
+            y = 200
+            for row in leader:
+                screen.blit((font.render(f'{c}. {", ".join(row)}', 1, (255, 255, 255))), (150, y))
+                y += 40
+                c += 1
