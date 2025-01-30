@@ -557,6 +557,7 @@ while True:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         flag = 'menu'
+                        menu.create_main()
                         with open('leader.csv', 'r',  newline='') as csvfile:
                             leader = csv.reader(csvfile, delimiter=';', quotechar='|')
                             spisok = []
@@ -576,7 +577,6 @@ while True:
 
                     elif event.key == pygame.K_BACKSPACE:
                         input_text = input_text[:-1]
-                        #screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
                     else:
                         if len(input_text) < 10:
                             input_text += event.unicode
