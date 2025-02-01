@@ -12,14 +12,16 @@ bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 
 player = None
+enemy = None
 
 
 def ready():
-    global flag, player_ready, end_game, player
+    global flag, player_ready, end_game, player, enemy
     end_game = ''
     menu.deletemenu()
     all_sprites.remove(player)
     player = Player(300, 800, 'data/player_anim.png', 2, 1)
+    enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 5, 2)
     all_sprites.add(player)
     player_ready = 1
     flag = 'play'
@@ -47,18 +49,25 @@ def print_text(message, x, y, font_color=(255, 255, 255), font_type='PixelFont.t
 
 
 def level1():
-    global player_ready, end_game, player
+    global player_ready, end_game, player, enemy
     end_game = ''
     menu.deletemenu()
     all_sprites.remove(player)
     player = Player(300, 800, 'data/player_anim.png', 2, 1)
+    enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 5, 2)
     all_sprites.add(player)
     player_ready = 1
 
 def level2():
-    global level, player_ready, end_game
+    global flag, player_ready, end_game, player, level, enemy
     end_game = ''
+    menu.deletemenu()
+    all_sprites.remove(player)
+    player = Player(300, 800, 'data/player_anim.png', 2, 1)
+    enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 7, 4)
+    all_sprites.add(player)
     player_ready = 1
+    flag = 'play'
     level = 2
 
 def load_image(name):
@@ -135,12 +144,13 @@ class Player(AnimatedSprite):
         score -= 50
 
     def damage(self):
-        global score, player_damage, game_over, flag, player_ready
+        global score, player_damage, game_over, flag, player_ready, death
         if pygame.sprite.spritecollideany(player, enemy_group):
             enemy.killed()
             if self.health < 1:
                 menu.game_over()
                 screen.fill((0, 0, 0))
+                death = 1
                 Lives.check_lives(3)
             else:
                 self.health -= 1
@@ -189,8 +199,11 @@ class Enemy(pygame.sprite.Sprite):
             self.create_new()
 
     def create_new(self):
-        global enemy
-        enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 5)
+        global enemy, level
+        if level == 1:
+            enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 5)
+        else:
+            enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 7, 4)
         enemy_group.add(enemy)
 
     def damage(self):
@@ -408,7 +421,7 @@ player_ready = 0
 width, height = 600, 900
 screen_rect = (0, 0, width, height)
 
-level = 0
+level = 1
 end_game = ''
 
 GRAVITY = 2
@@ -421,6 +434,7 @@ game_over_render = game_over_font.render('ИГРА ОКОНЧЕНА', 1, (205, 9
 game_over = 0
 
 flag = 'menu'
+death = 0
 
 menu = Menu()
 menu.create_main()
@@ -437,9 +451,6 @@ clock = pygame.time.Clock()
 
 heart = Lives(550, 25, 'data/heart/heart_1.png')
 bullet_image = pygame.image.load('data/bullet.png')
-enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png')
-
-enemy_group.add(enemy)
 
 while True:
     tick = clock.tick()
@@ -563,7 +574,6 @@ while True:
                                    leader_writer.writerow(row)
                                    a += 1
 
-
                     elif event.key == pygame.K_BACKSPACE:
                         input_text = input_text[:-1]
                     else:
@@ -572,6 +582,11 @@ while True:
                     screen.fill((0, 0, 0))
                     screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
         screen.blit((ARIAL_50.render(f'Введите имя', 1, (255, 255, 255))), (150, 400))
+        if death == 1:
+            screen.blit((ARIAL_50.render(f'Вы умерли', 1, (250, 128, 114))), (150, 200))
+            death = 0
+        else:
+            screen.blit((ARIAL_50.render(f'Уровень {level} пройден', 1, (250, 128, 114))), (100, 200))
 
 
     if flag == 'leader':
