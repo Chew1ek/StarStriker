@@ -95,10 +95,6 @@ class AnimatedSprite(pygame.sprite.Sprite):
                 self.frames.append(sheet.subsurface(pygame.Rect(
                     frame_location, self.rect.size)))
 
-    # def update(self):
-    #     self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-    #     self.image = self.frames[self.cur_frame]
-
 
 class Player(AnimatedSprite):
     def __init__(self, x, y, sheet_path, columns, rows, health=3):
@@ -143,9 +139,8 @@ class Player(AnimatedSprite):
         if pygame.sprite.spritecollideany(player, enemy_group):
             enemy.killed()
             if self.health < 1:
-                #game_over = 1
-                #menu.deletemenu()
                 menu.game_over()
+                screen.fill((0, 0, 0))
                 Lives.check_lives(3)
             else:
                 self.health -= 1
@@ -361,12 +356,10 @@ class Menu:
         global player_ready, high_scores, end_game, flag
         menu.deletemenu()
         player_ready = 0
-        #end_game = 'end game'
         flag = 'game_over'
         menu.append_option('Играть снова', lambda: ready())
         menu.append_option('Дальше', lambda: level2())
         menu.append_option('Выйти в меню', lambda: menu.create_main())
-       # menu.draw(screen, 150, 400, 75)
 
 
 
@@ -381,7 +374,6 @@ class Menu:
 
 
 class Particle(pygame.sprite.Sprite):
-    # сгенерируем частицы разного размера
     fire = [load_image("scrap.png")]
     for scale in (5, 10, 20):
         fire.append(pygame.transform.scale(fire[0], (scale, scale)))
@@ -447,7 +439,6 @@ heart = Lives(550, 25, 'data/heart/heart_1.png')
 bullet_image = pygame.image.load('data/bullet.png')
 enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png')
 
-# all_sprites.add(player)
 enemy_group.add(enemy)
 
 while True:
@@ -479,10 +470,8 @@ while True:
 
         if player_ready == 0:
             screen.fill((0, 0, 0))
-            # menu.draw(screen, 150, 350, 75)
             if end_game == 'end game':
                 screen.blit(game_over_render, (15, 200))
-                # menu.game_over()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     exit()
@@ -580,6 +569,7 @@ while True:
                     else:
                         if len(input_text) < 10:
                             input_text += event.unicode
+                    screen.fill((0, 0, 0))
                     screen.blit((font.render(f'{input_text}', 1, (255, 255, 255))), (150, 600))
         screen.blit((ARIAL_50.render(f'Введите имя', 1, (255, 255, 255))), (150, 400))
 
