@@ -307,7 +307,7 @@ class Menu:
                 enemy_group.add(enemy)
                 menu.select()
         if event.key == pygame.K_ESCAPE:
-            quit()
+            exit()
 
 
     def leaderboard(self):
@@ -360,7 +360,7 @@ class Menu:
                         else:
                             need_input = False
 
-        menu.append_option(input_text, quit)
+        menu.append_option(input_text, lambda: exit())
         print_text(input_text, 100, 400)
 
 
@@ -383,7 +383,7 @@ class Menu:
         menu.append_option('Старт', lambda: ready())
         menu.append_option('Выбор уровней', lambda: menu.level_switcher())
         menu.append_option('Таблица лидеров', lambda: menu.leaderboard())
-        menu.append_option('Выход', quit)
+        menu.append_option('Выход', lambda: exit())
 
 
 class Particle(pygame.sprite.Sprite):
@@ -432,6 +432,8 @@ background2 = pygame.image.load('data/background2.png')
 game_over_font = pygame.font.Font('PixelFont.ttf', 80)
 game_over_render = game_over_font.render('ИГРА ОКОНЧЕНА', 1, (205, 92, 92))
 game_over = 0
+
+pygame.display.set_icon(pygame.image.load("icon.ico"))
 
 flag = 'menu'
 death = 0
