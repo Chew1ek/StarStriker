@@ -1,5 +1,6 @@
 import os
 import sys
+from sys import exit
 
 import pygame
 import random
