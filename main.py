@@ -50,7 +50,7 @@ def print_text(message, x, y, font_color=(255, 255, 255), font_type='PixelFont.t
 
 
 def level1():
-    global player_ready, end_game, player, enemy
+    global player_ready, end_game, player, enemy, flag, level
     end_game = ''
     menu.deletemenu()
     all_sprites.remove(player)
@@ -58,6 +58,8 @@ def level1():
     enemy = Enemy(random.randint(50, width - 50), 0, 'data/enemy.png', 5, 2)
     all_sprites.add(player)
     player_ready = 1
+    flag = 'play'
+    level = 1
 
 def level2():
     global flag, player_ready, end_game, player, level, enemy
